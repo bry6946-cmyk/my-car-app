@@ -16,6 +16,15 @@ const TAG_COLORS = {
   purple: 'bg-purple-100 text-purple-800 border-purple-200',
 } as const;
 
+// --- 类型定义 ---
+interface WeatherData {
+  current: {
+    temperature_2m: number;
+    precipitation: number;
+    weather_code: number;
+  };
+}
+
 // --- 多语言字典 ---
 const t = {
   en: {
@@ -131,10 +140,9 @@ export default function MobileDetailingSaaS() {
   const content = t[lang]; 
 
   useEffect(() => {
-    // 修复点：加上 (data: any) 绕过类型检查
     fetch('https://api.open-meteo.com/v1/forecast?latitude=42.98&longitude=-81.24&current=temperature_2m,precipitation,weather_code&timezone=America%2FNew_York')
       .then(res => res.json())
-      .then((data: any) => {
+      .then((data: WeatherData) => {
         const temp = Math.round(data.current.temperature_2m);
         const precip = data.current.precipitation;
         const isRaining = precip > 0;
@@ -301,24 +309,21 @@ export default function MobileDetailingSaaS() {
                 placeholder={content.name}
                 className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:border-blue-500 transition-all"
                 value={details.name}
-                // 修复点：加上 (e: any)
-                onChange={(e: any) => setDetails({...details, name: e.target.value})}
+                onChange={(e) => setDetails({...details, name: e.target.value})}
               />
               <input 
                 type="tel" 
                 placeholder={content.phone}
                 className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:border-blue-500 transition-all"
                 value={details.phone}
-                // 修复点：加上 (e: any)
-                onChange={(e: any) => setDetails({...details, phone: e.target.value})}
+                onChange={(e) => setDetails({...details, phone: e.target.value})}
               />
               <textarea 
                 placeholder={content.notes}
                 rows={2}
                 className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:border-blue-500 transition-all"
                 value={details.notes}
-                // 修复点：加上 (e: any)
-                onChange={(e: any) => setDetails({...details, notes: e.target.value})}
+                onChange={(e) => setDetails({...details, notes: e.target.value})}
               />
             </div>
 
@@ -358,8 +363,7 @@ export default function MobileDetailingSaaS() {
                 placeholder="PIN (8888)"
                 className="w-full text-center text-2xl tracking-widest p-4 bg-gray-50 rounded-xl border mb-4 focus:ring-2 focus:ring-blue-500 outline-none transition-all"
                 value={passwordInput}
-                // 修复点：加上 (e: any)
-                onChange={(e: any) => setPasswordInput(e.target.value)}
+                onChange={(e) => setPasswordInput(e.target.value)}
               />
               <div className="grid grid-cols-2 gap-3">
                 <button onClick={() => setShowLogin(false)} className="p-3 rounded-xl font-bold text-gray-500 bg-gray-100 hover:bg-gray-200 transition-colors">Cancel</button>
@@ -429,8 +433,7 @@ export default function MobileDetailingSaaS() {
                     placeholder={content.addTag}
                     className="flex-1 p-2 bg-gray-50 rounded-lg text-sm outline-none border focus:border-blue-500 transition-colors"
                     value={newTagText}
-                    // 修复点：加上 (e: any)
-                    onChange={(e: any) => setNewTagText(e.target.value)}
+                    onChange={(e) => setNewTagText(e.target.value)}
                   />
                   <button 
                     onClick={handleAddTag}
