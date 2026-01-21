@@ -8,13 +8,13 @@ import {
 } from 'lucide-react';
 
 // --- 常量定义 ---
-const TAG_COLORS = {
+const TAG_COLORS: Record<string, string> = {
   blue: 'bg-blue-100 text-blue-800 border-blue-200',
   green: 'bg-green-100 text-green-800 border-green-200',
   yellow: 'bg-yellow-100 text-yellow-800 border-yellow-200',
   red: 'bg-red-100 text-red-800 border-red-200',
   purple: 'bg-purple-100 text-purple-800 border-purple-200',
-} as const;
+};
 
 // --- 类型定义 ---
 interface WeatherData {
@@ -121,12 +121,12 @@ export default function MobileDetailingSaaS() {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const [weather, setWeather] = useState({ temp: 0, condition: 'Loading...', rainMode: false });
-  const [tags, setTags] = useState([
+  const [tags, setTags] = useState<Array<{ id: number; text: string; color: string }>>([
     { id: 1, text: 'VIP', color: TAG_COLORS.yellow },
     { id: 2, text: 'Weekly', color: TAG_COLORS.blue },
   ]);
   const [newTagText, setNewTagText] = useState('');
-  const [selectedTagColor, setSelectedTagColor] = useState<keyof typeof TAG_COLORS>('blue');
+  const [selectedTagColor, setSelectedTagColor] = useState<string>('blue');
 
   const [details, setDetails] = useState({
     vehicleType: 'sedan',
@@ -418,7 +418,7 @@ export default function MobileDetailingSaaS() {
 
               <div className="space-y-3 pt-2 border-t border-gray-100">
                 <div className="flex gap-2">
-                  {(Object.keys(TAG_COLORS) as Array<keyof typeof TAG_COLORS>).map(color => (
+                  {Object.keys(TAG_COLORS).map(color => (
                     <button 
                       key={color}
                       onClick={() => setSelectedTagColor(color)}
