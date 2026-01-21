@@ -1,270 +1,487 @@
 "use client";
 
-import React, { useState } from 'react';
-import { CloudRain, DollarSign, Calendar, Tag, Trash2, Plus, User, Lock, ChevronRight } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { 
+  CloudRain, Sun, Tag, Trash2, Plus, 
+  Lock, Check, DollarSign,
+  Car, Truck, Bus, Loader2 // 引入 Loader 图标
+} from 'lucide-react';
+
+// --- 常量定义 (优化代码结构) ---
+const TAG_COLORS = {
+  blue: 'bg-blue-100 text-blue-800 border-blue-200',
+  green: 'bg-green-100 text-green-800 border-green-200',
+  yellow: 'bg-yellow-100 text-yellow-800 border-yellow-200',
+  red: 'bg-red-100 text-red-800 border-red-200',
+  purple: 'bg-purple-100 text-purple-800 border-purple-200',
+} as const;
+
+// --- 多语言字典 ---
+const t = {
+  en: {
+    brand: "Ruiyu Auto Spa",
+    vehicleType: "Select Vehicle Type",
+    packages: "Select Package",
+    addons: "Add-ons & Surcharges",
+    contact: "Contact Info",
+    pay: "Pay & Book",
+    total: "Estimated Total",
+    sedan: "Sedan/Coupe",
+    suv: "SUV/Crossover",
+    truck: "Truck/Minivan",
+    dogHair: "Pet Hair Removal",
+    biohazard: "Biohazard / Vomit",
+    sand: "Excessive Sand",
+    name: "Full Name",
+    phone: "Phone Number",
+    notes: "Notes (Gate code, etc.)",
+    rainMode: "Rain Mode",
+    temp: "London, ON",
+    tags: "Client Tags",
+    addTag: "Add Tag",
+    login: "Owner Access",
+    welcome: "Welcome back, Boss.",
+    jobs: "Upcoming Jobs",
+    bookingSuccess: "Booking request sent!",
+    valName: "Please enter your name",
+    valPhone: "Please enter a valid 10-digit phone number"
+  },
+  zh: {
+    brand: "瑞宇汽车美容",
+    vehicleType: "选择车型",
+    packages: "选择套餐",
+    addons: "附加选项",
+    contact: "联系信息",
+    pay: "支付并预约",
+    total: "预估总价",
+    sedan: "轿车/跑车",
+    suv: "SUV/越野车",
+    truck: "皮卡/MPV",
+    dogHair: "宠物毛发清理",
+    biohazard: "异味/呕吐物处理",
+    sand: "重度泥沙清理",
+    name: "您的称呼",
+    phone: "联系电话",
+    notes: "备注 (门禁密码、注意事项)",
+    rainMode: "雨天模式",
+    temp: "安大略省 伦敦",
+    tags: "客户标签",
+    addTag: "添加标签",
+    login: "店主入口",
+    welcome: "欢迎回来，老板",
+    jobs: "待办任务",
+    bookingSuccess: "预约请求已发送！",
+    valName: "请输入您的姓名",
+    valPhone: "请输入有效的10位电话号码"
+  },
+  fr: {
+    brand: "Ruiyu Auto Spa",
+    vehicleType: "Type de Véhicule",
+    packages: "Forfaits",
+    addons: "Suppléments",
+    contact: "Contact",
+    pay: "Payer et Réserver",
+    total: "Total Estimé",
+    sedan: "Berline/Coupé",
+    suv: "VUS/Crossover",
+    truck: "Camion/Minivan",
+    dogHair: "Poils d'animaux",
+    biohazard: "Risque biologique",
+    sand: "Sable excessif",
+    name: "Nom complet",
+    phone: "Téléphone",
+    notes: "Notes (Code d'accès, etc.)",
+    rainMode: "Mode Pluie",
+    temp: "London, ON",
+    tags: "Tags Client",
+    addTag: "Ajouter Tag",
+    login: "Accès Propriétaire",
+    welcome: "Bon retour, Patron.",
+    jobs: "Travaux à venir",
+    bookingSuccess: "Demande envoyée!",
+    valName: "Entrez votre nom",
+    valPhone: "Entrez un numéro valide"
+  }
+};
 
 export default function MobileDetailingSaaS() {
-  // --- 状态管理 (相当于 App 的内存) ---
-  
-  // 1. 视图控制：默认是 'customer' (客户), 只有登录后才能变 'owner' (老板)
+  // --- 全局状态 ---
+  const [lang, setLang] = useState<'en' | 'zh' | 'fr'>('en');
   const [viewMode, setViewMode] = useState('customer'); 
-  const [passwordInput, setPasswordInput] = useState('');
   const [showLogin, setShowLogin] = useState(false);
+  const [passwordInput, setPasswordInput] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false); // Loading 状态
 
-  // 2. 品牌名称 (你可以随时在这里改)
-  const brandName = "Ruiyu Auto Spa";
-
-  // 3. 客户表单数据
-  const [customerForm, setCustomerForm] = useState({
-    name: '',
-    phone: '',
-    notes: '' // 新增：客户备注
-  });
-
-  // 4. 老板视角的标签系统 (现在是动态数组了，可以增删)
+  // --- 老板后台状态 ---
+  const [weather, setWeather] = useState({ temp: 0, condition: 'Loading...', rainMode: false });
   const [tags, setTags] = useState([
-    { id: 1, text: 'VIP 客户', color: 'bg-yellow-100 text-yellow-800' },
-    { id: 2, text: '周更用户', color: 'bg-blue-100 text-blue-800' },
-    { id: 3, text: '内饰洁癖', color: 'bg-purple-100 text-purple-800' }
+    { id: 1, text: 'VIP', color: TAG_COLORS.yellow },
+    { id: 2, text: 'Weekly', color: TAG_COLORS.blue },
   ]);
   const [newTagText, setNewTagText] = useState('');
+  const [selectedTagColor, setSelectedTagColor] = useState<keyof typeof TAG_COLORS>('blue');
 
-  // --- 功能函数 ---
+  // --- 客户表单状态 ---
+  const [details, setDetails] = useState({
+    vehicleType: 'sedan',
+    packageId: 'standard',
+    addons: [] as string[],
+    name: '',
+    phone: '',
+    notes: ''
+  });
 
-  // 客户提交预约
+  const content = t[lang]; 
+
+  // --- 真实天气 API 集成 (London, Ontario) ---
+  useEffect(() => {
+    // 经纬度：London, ON (42.98, -81.24)
+    fetch('https://api.open-meteo.com/v1/forecast?latitude=42.98&longitude=-81.24&current=temperature_2m,precipitation,weather_code&timezone=America%2FNew_York')
+      .then(res => res.json())
+      .then(data => {
+        const temp = Math.round(data.current.temperature_2m);
+        const precip = data.current.precipitation;
+        // 如果降水概率 > 0 或者 API 返回下雨代码，开启雨天模式
+        const isRaining = precip > 0;
+        
+        setWeather({
+          temp: temp,
+          condition: isRaining ? 'Rainy' : 'Clear',
+          rainMode: isRaining // 自动检测雨天模式
+        });
+      })
+      .catch(err => console.error("Weather fetch failed", err));
+  }, []);
+
+  const packages = [
+    { id: 'express', name: 'Express Wash', price: 45, desc: 'Exterior wash & wax, rim cleaning' },
+    { id: 'standard', name: 'Standard Detail', price: 120, desc: 'Full interior vacuum, wipe down, exterior hand wash' },
+    { id: 'premium', name: 'Premium Detail', price: 250, desc: 'Steam cleaning, leather conditioning, clay bar' },
+  ];
+
+  const calculateTotal = () => {
+    let total = packages.find(p => p.id === details.packageId)?.price || 0;
+    if (details.vehicleType === 'suv') total += 20;
+    if (details.vehicleType === 'truck') total += 40;
+    if (details.addons.includes('dogHair')) total += 50;
+    if (details.addons.includes('biohazard')) total += 80;
+    if (details.addons.includes('sand')) total += 30;
+    return total;
+  };
+
+  const toggleAddon = (id: string) => {
+    setDetails(prev => ({
+      ...prev,
+      addons: prev.addons.includes(id) 
+        ? prev.addons.filter(x => x !== id)
+        : [...prev.addons, id]
+    }));
+  };
+
+  // --- 表单验证与提交 ---
   const handleBooking = () => {
-    if (!customerForm.name || !customerForm.phone) {
-      alert("请填写姓名和电话");
+    // 1. 验证姓名
+    if (!details.name.trim()) {
+      alert(content.valName);
       return;
     }
-    alert(`预约成功！\n姓名: ${customerForm.name}\n电话: ${customerForm.phone}\n备注: ${customerForm.notes || '无'}\n\n(模拟：数据已发送给老板)`);
-    setCustomerForm({ name: '', phone: '', notes: '' }); // 清空表单
-  };
-
-  // 老板登录逻辑
-  const handleLogin = () => {
-    if (passwordInput === '8888') { // 简单的模拟密码
-      setViewMode('owner');
-      setShowLogin(false);
-      setPasswordInput('');
-    } else {
-      alert("密码错误 (提示: 试视 8888)");
+    // 2. 验证电话 (简单的正则：10-11位数字)
+    if (!/^\d{10,11}$/.test(details.phone.replace(/\D/g, ''))) {
+      alert(content.valPhone);
+      return;
     }
+
+    // 3. 模拟提交过程
+    setIsSubmitting(true);
+    setTimeout(() => {
+      setIsSubmitting(false);
+      alert(`${content.bookingSuccess}\nTotal: $${calculateTotal()}`);
+      // 这里未来会接 Supabase
+    }, 1500);
   };
 
-  // 标签管理：添加标签
   const handleAddTag = () => {
     if (!newTagText.trim()) return;
-    const newTag = {
-      id: Date.now(), // 用时间戳做唯一ID
-      text: newTagText,
-      color: 'bg-gray-100 text-gray-800' // 默认灰色，以后可以做颜色选择
-    };
-    setTags([...tags, newTag]); // 把新标签加入数组
+    setTags([...tags, { id: Date.now(), text: newTagText, color: TAG_COLORS[selectedTagColor] }]);
     setNewTagText('');
   };
 
-  // 标签管理：删除标签
-  const handleDeleteTag = (id: number) => {
-    setTags(tags.filter(tag => tag.id !== id)); // 留下ID不等于被删ID的标签
-  };
-
-  // --- 界面渲染 ---
-
   return (
-    <div className="min-h-screen bg-white font-sans text-gray-900">
+    <div className="min-h-screen bg-gray-50 font-sans text-gray-900 pb-20">
       
       {/* 顶部导航 */}
-      <nav className="flex justify-between items-center p-4 border-b border-gray-100 sticky top-0 bg-white/90 backdrop-blur-md z-10">
-        <div className="text-xl font-black tracking-tighter text-blue-600">{brandName}</div>
-        
-        {/* 如果是老板模式，显示退出按钮 */}
-        {viewMode === 'owner' && (
-          <button 
-            onClick={() => setViewMode('customer')}
-            className="text-sm font-medium text-gray-500 hover:text-red-500 transition-colors"
-          >
-            退出管理
-          </button>
-        )}
+      <nav className="bg-white px-6 py-4 flex justify-between items-center shadow-sm sticky top-0 z-50">
+        <div className="font-black text-xl tracking-tight text-blue-700">{content.brand}</div>
+        <div className="flex gap-2 items-center">
+          {(['en', 'zh', 'fr'] as const).map((l) => (
+            <button 
+              key={l} 
+              onClick={() => setLang(l)} 
+              className={`text-xs font-bold px-2 py-1 rounded transition-colors ${lang === l ? 'bg-black text-white' : 'text-gray-400 hover:text-gray-600'}`}
+            >
+              {l.toUpperCase()}
+            </button>
+          ))}
+          {viewMode === 'owner' && (
+             <button onClick={() => setViewMode('customer')} className="ml-2 text-xs text-red-500 font-bold border border-red-200 px-2 py-1 rounded">Exit</button>
+          )}
+        </div>
       </nav>
 
-      <main className="max-w-md mx-auto p-6 pb-24">
-        
-        {/* --- 视图 A: 客户预约界面 --- */}
+      <main className="max-w-md mx-auto p-4">
+
+        {/* ================= 客户界面 ================= */}
         {viewMode === 'customer' && !showLogin && (
-          <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
-            <div className="text-center space-y-2">
-              <h1 className="text-3xl font-extrabold text-gray-900">让爱车焕然一新</h1>
-              <p className="text-gray-500">专业上门洗车服务，风雨无阻。</p>
+          <div className="animate-in fade-in duration-500 space-y-6">
+            
+            {/* 1. 车型选择 (更换了更合适的图标) */}
+            <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100">
+              <h2 className="text-sm font-bold text-gray-500 mb-3 uppercase tracking-wider">{content.vehicleType}</h2>
+              <div className="grid grid-cols-3 gap-2">
+                {[
+                  { id: 'sedan', label: content.sedan, icon: <Car className="w-6 h-6 mb-1"/> },
+                  { id: 'suv', label: content.suv, icon: <Bus className="w-6 h-6 mb-1"/> }, // 用 Bus 代表大一点的车
+                  { id: 'truck', label: content.truck, icon: <Truck className="w-6 h-6 mb-1"/> }
+                ].map((type) => (
+                  <button 
+                    key={type.id}
+                    onClick={() => setDetails({...details, vehicleType: type.id})}
+                    className={`flex flex-col items-center justify-center p-3 rounded-xl border-2 transition-all ${
+                      details.vehicleType === type.id 
+                      ? 'border-blue-600 bg-blue-50 text-blue-700' 
+                      : 'border-gray-100 text-gray-400 hover:border-gray-200'
+                    }`}
+                  >
+                    {type.icon}
+                    <span className="text-[10px] font-bold text-center leading-tight">{type.label}</span>
+                  </button>
+                ))}
+              </div>
             </div>
 
-            {/* 模拟套餐卡片 (你的想法：套餐绑定) */}
-            <div className="p-4 rounded-2xl border-2 border-blue-500 bg-blue-50 shadow-lg relative overflow-hidden">
-              <div className="absolute top-0 right-0 bg-blue-500 text-white text-xs font-bold px-2 py-1 rounded-bl-lg">新人特惠</div>
-              <div className="flex justify-between items-center mb-2">
-                <span className="font-bold text-lg">标准精洗套餐</span>
-                <span className="text-2xl font-black text-blue-600">$45</span>
+            {/* 2. 套餐选择 */}
+            <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100">
+              <h2 className="text-sm font-bold text-gray-500 mb-3 uppercase tracking-wider">{content.packages}</h2>
+              <div className="space-y-3">
+                {packages.map(pkg => (
+                  <div 
+                    key={pkg.id}
+                    onClick={() => setDetails({...details, packageId: pkg.id})}
+                    className={`p-4 rounded-xl border-2 cursor-pointer relative transition-all ${
+                      details.packageId === pkg.id ? 'border-blue-600 bg-blue-50' : 'border-gray-100 hover:border-blue-200'
+                    }`}
+                  >
+                    <div className="flex justify-between items-center mb-1">
+                      <span className={`font-bold ${details.packageId === pkg.id ? 'text-blue-900' : 'text-gray-900'}`}>{pkg.name}</span>
+                      <span className="font-black text-lg">${pkg.price}</span>
+                    </div>
+                    <p className="text-xs text-gray-500">{pkg.desc}</p>
+                    {details.packageId === pkg.id && (
+                      <div className="absolute top-4 right-4 text-blue-600">
+                        <Check className="w-5 h-5" />
+                      </div>
+                    )}
+                  </div>
+                ))}
               </div>
-              <ul className="text-sm text-gray-600 space-y-1 mb-4">
-                <li>• 全车泡沫清洗 & 镀膜</li>
-                <li>• 内饰深度吸尘</li>
-                <li>• 轮胎轮毂养护</li>
-              </ul>
             </div>
 
-            {/* 预约表单 */}
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-bold text-gray-700 mb-1">您的称呼</label>
-                <input 
-                  type="text" 
-                  className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
-                  placeholder="例如: Alex Li"
-                  value={customerForm.name}
-                  onChange={e => setCustomerForm({...customerForm, name: e.target.value})}
-                />
+            {/* 3. 附加选项 */}
+            <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100">
+              <h2 className="text-sm font-bold text-gray-500 mb-3 uppercase tracking-wider">{content.addons}</h2>
+              <div className="space-y-3">
+                {[
+                  { id: 'dogHair', label: content.dogHair, price: 50 },
+                  { id: 'biohazard', label: content.biohazard, price: 80 },
+                  { id: 'sand', label: content.sand, price: 30 },
+                ].map(addon => (
+                  <label key={addon.id} className="flex items-center justify-between p-3 rounded-lg bg-gray-50 border border-gray-100 cursor-pointer hover:bg-gray-100 transition-colors">
+                    <div className="flex items-center gap-3">
+                      <div className={`w-5 h-5 rounded border flex items-center justify-center transition-colors ${details.addons.includes(addon.id) ? 'bg-blue-600 border-blue-600' : 'bg-white border-gray-300'}`}>
+                        {details.addons.includes(addon.id) && <Check className="w-3 h-3 text-white" />}
+                      </div>
+                      <span className="font-medium text-gray-700">{addon.label}</span>
+                    </div>
+                    <span className="text-sm font-bold text-gray-500">+${addon.price}</span>
+                    <input type="checkbox" className="hidden" checked={details.addons.includes(addon.id)} onChange={() => toggleAddon(addon.id)} />
+                  </label>
+                ))}
               </div>
-              
-              <div>
-                <label className="block text-sm font-bold text-gray-700 mb-1">联系电话</label>
-                <input 
-                  type="tel" 
-                  className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
-                  placeholder="647-555-0123"
-                  value={customerForm.phone}
-                  onChange={e => setCustomerForm({...customerForm, phone: e.target.value})}
-                />
-              </div>
-
-              {/* 新增：客户备注功能 */}
-              <div>
-                <label className="block text-sm font-bold text-gray-700 mb-1">备注需求 (选填)</label>
-                <textarea 
-                  className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
-                  rows={3}
-                  placeholder="例如: 后备箱有很多杂物请勿清理..."
-                  value={customerForm.notes}
-                  onChange={e => setCustomerForm({...customerForm, notes: e.target.value})}
-                />
-              </div>
-
-              <button 
-                onClick={handleBooking}
-                className="w-full bg-black text-white py-4 rounded-xl font-bold text-lg hover:bg-gray-800 transform active:scale-95 transition-all shadow-xl"
-              >
-                立即预约
-              </button>
             </div>
 
-            {/* 底部：老板登录入口 */}
-            <div className="pt-10 text-center">
-              <button 
-                onClick={() => setShowLogin(true)}
-                className="text-xs text-gray-300 hover:text-gray-500 flex items-center justify-center mx-auto gap-1"
-              >
-                <Lock className="w-3 h-3" /> 店主入口
-              </button>
+            {/* 4. 联系信息 (已添加验证) */}
+            <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 space-y-4">
+              <h2 className="text-sm font-bold text-gray-500 uppercase tracking-wider">{content.contact}</h2>
+              <input 
+                type="text" 
+                placeholder={content.name}
+                className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:border-blue-500 transition-all"
+                value={details.name}
+                onChange={e => setDetails({...details, name: e.target.value})}
+              />
+              <input 
+                type="tel" 
+                placeholder={content.phone}
+                className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:border-blue-500 transition-all"
+                value={details.phone}
+                onChange={e => setDetails({...details, phone: e.target.value})}
+              />
+              <textarea 
+                placeholder={content.notes}
+                rows={2}
+                className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:border-blue-500 transition-all"
+                value={details.notes}
+                onChange={e => setDetails({...details, notes: e.target.value})}
+              />
+            </div>
+
+            {/* 5. 支付按钮 (带 Loading) */}
+            <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-4 safe-area-pb shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)]">
+              <div className="max-w-md mx-auto flex items-center justify-between gap-4">
+                <div>
+                  <div className="text-xs text-gray-500 font-medium">{content.total}</div>
+                  <div className="text-2xl font-black text-gray-900">${calculateTotal()}</div>
+                </div>
+                <button 
+                  onClick={handleBooking}
+                  disabled={isSubmitting}
+                  className="flex-1 bg-blue-600 text-white font-bold py-3 px-6 rounded-xl shadow-lg shadow-blue-200 active:scale-95 transition-transform flex items-center justify-center gap-2 disabled:bg-gray-400 disabled:cursor-not-allowed"
+                >
+                  {isSubmitting ? <Loader2 className="w-5 h-5 animate-spin" /> : <><DollarSign className="w-4 h-4" /> {content.pay}</>}
+                </button>
+              </div>
+            </div>
+
+            <div className="pt-20 pb-10 text-center">
+               <button onClick={() => setShowLogin(true)} className="text-gray-300 text-xs hover:text-gray-500 font-medium">{content.login}</button>
             </div>
           </div>
         )}
 
-        {/* --- 视图 B: 登录界面 (模拟) --- */}
+        {/* ================= 登录界面 ================= */}
         {showLogin && (
-          <div className="bg-gray-50 p-8 rounded-3xl border border-gray-100 shadow-2xl animate-in zoom-in duration-300">
-            <h2 className="text-xl font-bold mb-4 text-center">店主验证</h2>
-            <input 
-              type="password" 
-              placeholder="输入密码 (8888)"
-              className="w-full p-3 mb-4 rounded-xl border"
-              value={passwordInput}
-              onChange={e => setPasswordInput(e.target.value)}
-            />
-            <div className="flex gap-2">
-              <button onClick={() => setShowLogin(false)} className="flex-1 p-3 rounded-xl bg-gray-200 font-bold text-gray-600">取消</button>
-              <button onClick={handleLogin} className="flex-1 p-3 rounded-xl bg-blue-600 text-white font-bold">进入后台</button>
+          <div className="flex flex-col items-center justify-center min-h-[60vh] animate-in zoom-in duration-300">
+            <div className="bg-white p-8 rounded-3xl shadow-xl w-full max-w-sm border border-gray-100">
+              <h2 className="text-xl font-bold mb-6 text-center">{content.login}</h2>
+              <div className="flex justify-center mb-6">
+                 <div className="bg-gray-100 p-4 rounded-full">
+                    <Lock className="w-8 h-8 text-gray-400" />
+                 </div>
+              </div>
+              <input 
+                type="password" 
+                placeholder="PIN (8888)"
+                className="w-full text-center text-2xl tracking-widest p-4 bg-gray-50 rounded-xl border mb-4 focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+                value={passwordInput}
+                onChange={e => setPasswordInput(e.target.value)}
+              />
+              <div className="grid grid-cols-2 gap-3">
+                <button onClick={() => setShowLogin(false)} className="p-3 rounded-xl font-bold text-gray-500 bg-gray-100 hover:bg-gray-200 transition-colors">Cancel</button>
+                <button onClick={() => {
+                  // 注意：这是前端演示用的非安全验证。正式版需接后端 API。
+                  if(passwordInput === '8888') { setViewMode('owner'); setShowLogin(false); setPasswordInput(''); } 
+                  else alert('Demo PIN: 8888');
+                }} className="p-3 rounded-xl font-bold text-white bg-blue-600 hover:bg-blue-700 transition-colors">Login</button>
+              </div>
             </div>
           </div>
         )}
 
-        {/* --- 视图 C: 老板后台 (CRM) --- */}
+        {/* ================= 老板后台 (CRM) ================= */}
         {viewMode === 'owner' && (
-          <div className="space-y-6 animate-in fade-in duration-500">
-            <div className="flex justify-between items-end">
-              <div>
-                <h1 className="text-2xl font-extrabold text-gray-900">今日概览</h1>
-                <p className="text-sm text-gray-500">欢迎回来, Boss.</p>
-              </div>
-              <div className="bg-green-100 text-green-700 px-3 py-1 rounded-full text-sm font-bold flex items-center gap-1">
-                <CloudRain className="w-4 h-4" /> 适合洗车
+          <div className="space-y-6 animate-in slide-in-from-right duration-500">
+            
+            {/* 1. 真实天气卡片 (Open-Meteo) */}
+            <div className={`p-6 rounded-3xl text-white shadow-xl transition-colors ${weather.rainMode ? 'bg-red-500' : 'bg-blue-600'}`}>
+              <div className="flex justify-between items-start mb-4">
+                <div>
+                  <h1 className="text-2xl font-bold">{content.welcome}</h1>
+                  <div className="flex items-center gap-2 mt-1 opacity-90">
+                    {weather.rainMode ? <CloudRain className="w-5 h-5" /> : <Sun className="w-5 h-5" />}
+                    <span className="font-medium">{weather.temp}°C {content.temp}</span>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <div className="text-xs font-bold uppercase opacity-75 mb-1">{content.rainMode}</div>
+                  <button 
+                    onClick={() => setWeather(prev => ({...prev, rainMode: !prev.rainMode}))}
+                    className={`px-3 py-1 rounded-full text-xs font-bold transition-all ${weather.rainMode ? 'bg-white text-red-500' : 'bg-blue-700 text-blue-200'}`}
+                  >
+                    {weather.rainMode ? "Active" : "Inactive"}
+                  </button>
+                </div>
               </div>
             </div>
 
-            {/* CRM 核心功能：客户标签管理 */}
+            {/* 2. 标签管理 (优化后的代码) */}
             <div className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm">
               <h3 className="font-bold text-gray-800 mb-3 flex items-center gap-2">
-                <Tag className="w-4 h-4 text-blue-500" /> 客户标签库 (可编辑)
+                <Tag className="w-4 h-4 text-blue-500" /> {content.tags}
               </h3>
               
               <div className="flex flex-wrap gap-2 mb-4">
                 {tags.map(tag => (
-                  <span key={tag.id} className={`${tag.color} px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1`}>
+                  <span key={tag.id} className={`${tag.color} border px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1`}>
                     {tag.text}
-                    {/* 删除标签按钮 */}
-                    <button onClick={() => handleDeleteTag(tag.id)} className="hover:text-red-600 ml-1">
+                    <button onClick={() => setTags(tags.filter(t => t.id !== tag.id))} className="hover:opacity-50 ml-1">
                       <Trash2 className="w-3 h-3" />
                     </button>
                   </span>
                 ))}
               </div>
 
-              {/* 添加标签 */}
-              <div className="flex gap-2">
-                <input 
-                  type="text" 
-                  placeholder="输入新标签..."
-                  className="flex-1 p-2 bg-gray-50 rounded-lg text-sm outline-none border focus:border-blue-500"
-                  value={newTagText}
-                  onChange={e => setNewTagText(e.target.value)}
-                />
-                <button 
-                  onClick={handleAddTag}
-                  className="bg-black text-white px-3 py-2 rounded-lg text-sm font-bold flex items-center"
-                >
-                  <Plus className="w-4 h-4" />
-                </button>
+              <div className="space-y-3 pt-2 border-t border-gray-100">
+                <div className="flex gap-2">
+                  {(Object.keys(TAG_COLORS) as Array<keyof typeof TAG_COLORS>).map(color => (
+                    <button 
+                      key={color}
+                      onClick={() => setSelectedTagColor(color)}
+                      className={`w-6 h-6 rounded-full border-2 transition-transform ${selectedTagColor === color ? 'border-gray-900 scale-110' : 'border-transparent'}`}
+                      style={{ backgroundColor: color === 'yellow' ? '#fef08a' : color === 'red' ? '#fecaca' : color === 'green' ? '#bbf7d0' : color === 'purple' ? '#e9d5ff' : '#bfdbfe' }} 
+                    />
+                  ))}
+                </div>
+                <div className="flex gap-2">
+                  <input 
+                    type="text" 
+                    placeholder={content.addTag}
+                    className="flex-1 p-2 bg-gray-50 rounded-lg text-sm outline-none border focus:border-blue-500 transition-colors"
+                    value={newTagText}
+                    onChange={e => setNewTagText(e.target.value)}
+                  />
+                  <button 
+                    onClick={handleAddTag}
+                    className="bg-black text-white px-3 py-2 rounded-lg text-sm font-bold hover:bg-gray-800 transition-colors"
+                  >
+                    <Plus className="w-4 h-4" />
+                  </button>
+                </div>
               </div>
             </div>
 
-            {/* 模拟的今日预约列表 */}
-            <div className="space-y-3">
-              <h3 className="font-bold text-gray-800">待服务客户 (3)</h3>
-              
-              {/* 卡片 1 */}
-              <div className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm flex justify-between items-center group hover:border-blue-300 transition-all cursor-pointer">
-                <div>
-                  <div className="font-bold text-gray-900">Mike Ross (Tesla Model 3)</div>
-                  <div className="text-xs text-gray-500 mt-1">预约时间: 2:00 PM</div>
-                  <div className="mt-2 flex gap-1">
-                    <span className="bg-yellow-100 text-yellow-800 px-2 py-0.5 rounded text-[10px] font-bold">VIP 客户</span>
-                    <span className="bg-gray-100 text-gray-600 px-2 py-0.5 rounded text-[10px]">备注: 有狗毛</span>
+            {/* 3. 任务列表 */}
+            <div className="space-y-4">
+              <h3 className="font-bold text-gray-800 px-1">{content.jobs}</h3>
+              <div className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm group">
+                <div className="flex justify-between items-start mb-2">
+                  <div>
+                    <div className="font-bold text-lg">Mike Ross</div>
+                    <div className="text-gray-500 text-sm">Tesla Model S (Sedan)</div>
                   </div>
+                  <div className="bg-green-100 text-green-800 px-2 py-1 rounded text-xs font-bold">14:00</div>
                 </div>
-                <ChevronRight className="text-gray-300 group-hover:text-blue-500" />
-              </div>
-
-               {/* 卡片 2 */}
-               <div className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm flex justify-between items-center group hover:border-blue-300 transition-all cursor-pointer">
-                <div>
-                  <div className="font-bold text-gray-900">Sarah Jen (BMW X5)</div>
-                  <div className="text-xs text-gray-500 mt-1">预约时间: 4:30 PM</div>
-                  <div className="mt-2">
-                     <span className="bg-blue-100 text-blue-800 px-2 py-0.5 rounded text-[10px] font-bold">周更用户</span>
-                  </div>
+                <div className="flex gap-2 mb-3">
+                  <span className={`${TAG_COLORS.yellow} border px-2 py-0.5 rounded text-[10px] font-bold`}>VIP</span>
                 </div>
-                <ChevronRight className="text-gray-300 group-hover:text-blue-500" />
+                <div className="bg-gray-50 p-3 rounded-lg space-y-2">
+                  <div className="text-xs text-gray-500 font-bold uppercase">Internal Notes</div>
+                  <textarea 
+                    className="w-full bg-transparent text-sm text-gray-700 outline-none resize-none"
+                    placeholder="Add private notes..."
+                    defaultValue="Prefer text over call. Watch out for curbs."
+                  />
+                </div>
               </div>
-
             </div>
           </div>
         )}
