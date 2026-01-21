@@ -4,10 +4,10 @@ import React, { useState, useEffect } from 'react';
 import { 
   CloudRain, Sun, Tag, Trash2, Plus, 
   Lock, Check, DollarSign,
-  Car, Truck, Bus, Loader2 // 引入 Loader 图标
+  Car, Truck, Bus, Loader2 
 } from 'lucide-react';
 
-// --- 常量定义 (优化代码结构) ---
+// --- 常量定义 ---
 const TAG_COLORS = {
   blue: 'bg-blue-100 text-blue-800 border-blue-200',
   green: 'bg-green-100 text-green-800 border-green-200',
@@ -105,14 +105,12 @@ const t = {
 };
 
 export default function MobileDetailingSaaS() {
-  // --- 全局状态 ---
   const [lang, setLang] = useState<'en' | 'zh' | 'fr'>('en');
   const [viewMode, setViewMode] = useState('customer'); 
   const [showLogin, setShowLogin] = useState(false);
   const [passwordInput, setPasswordInput] = useState('');
-  const [isSubmitting, setIsSubmitting] = useState(false); // Loading 状态
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // --- 老板后台状态 ---
   const [weather, setWeather] = useState({ temp: 0, condition: 'Loading...', rainMode: false });
   const [tags, setTags] = useState([
     { id: 1, text: 'VIP', color: TAG_COLORS.yellow },
@@ -121,7 +119,6 @@ export default function MobileDetailingSaaS() {
   const [newTagText, setNewTagText] = useState('');
   const [selectedTagColor, setSelectedTagColor] = useState<keyof typeof TAG_COLORS>('blue');
 
-  // --- 客户表单状态 ---
   const [details, setDetails] = useState({
     vehicleType: 'sedan',
     packageId: 'standard',
@@ -133,21 +130,19 @@ export default function MobileDetailingSaaS() {
 
   const content = t[lang]; 
 
-  // --- 真实天气 API 集成 (London, Ontario) ---
   useEffect(() => {
-    // 经纬度：London, ON (42.98, -81.24)
+    // 修复点：加上 (data: any) 绕过类型检查
     fetch('https://api.open-meteo.com/v1/forecast?latitude=42.98&longitude=-81.24&current=temperature_2m,precipitation,weather_code&timezone=America%2FNew_York')
       .then(res => res.json())
-      .then(data => {
+      .then((data: any) => {
         const temp = Math.round(data.current.temperature_2m);
         const precip = data.current.precipitation;
-        // 如果降水概率 > 0 或者 API 返回下雨代码，开启雨天模式
         const isRaining = precip > 0;
         
         setWeather({
           temp: temp,
           condition: isRaining ? 'Rainy' : 'Clear',
-          rainMode: isRaining // 自动检测雨天模式
+          rainMode: isRaining 
         });
       })
       .catch(err => console.error("Weather fetch failed", err));
@@ -178,25 +173,20 @@ export default function MobileDetailingSaaS() {
     }));
   };
 
-  // --- 表单验证与提交 ---
   const handleBooking = () => {
-    // 1. 验证姓名
     if (!details.name.trim()) {
       alert(content.valName);
       return;
     }
-    // 2. 验证电话 (简单的正则：10-11位数字)
     if (!/^\d{10,11}$/.test(details.phone.replace(/\D/g, ''))) {
       alert(content.valPhone);
       return;
     }
 
-    // 3. 模拟提交过程
     setIsSubmitting(true);
     setTimeout(() => {
       setIsSubmitting(false);
       alert(`${content.bookingSuccess}\nTotal: $${calculateTotal()}`);
-      // 这里未来会接 Supabase
     }, 1500);
   };
 
@@ -209,7 +199,6 @@ export default function MobileDetailingSaaS() {
   return (
     <div className="min-h-screen bg-gray-50 font-sans text-gray-900 pb-20">
       
-      {/* 顶部导航 */}
       <nav className="bg-white px-6 py-4 flex justify-between items-center shadow-sm sticky top-0 z-50">
         <div className="font-black text-xl tracking-tight text-blue-700">{content.brand}</div>
         <div className="flex gap-2 items-center">
@@ -230,17 +219,15 @@ export default function MobileDetailingSaaS() {
 
       <main className="max-w-md mx-auto p-4">
 
-        {/* ================= 客户界面 ================= */}
         {viewMode === 'customer' && !showLogin && (
           <div className="animate-in fade-in duration-500 space-y-6">
             
-            {/* 1. 车型选择 (更换了更合适的图标) */}
             <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100">
               <h2 className="text-sm font-bold text-gray-500 mb-3 uppercase tracking-wider">{content.vehicleType}</h2>
               <div className="grid grid-cols-3 gap-2">
                 {[
                   { id: 'sedan', label: content.sedan, icon: <Car className="w-6 h-6 mb-1"/> },
-                  { id: 'suv', label: content.suv, icon: <Bus className="w-6 h-6 mb-1"/> }, // 用 Bus 代表大一点的车
+                  { id: 'suv', label: content.suv, icon: <Bus className="w-6 h-6 mb-1"/> },
                   { id: 'truck', label: content.truck, icon: <Truck className="w-6 h-6 mb-1"/> }
                 ].map((type) => (
                   <button 
@@ -259,7 +246,6 @@ export default function MobileDetailingSaaS() {
               </div>
             </div>
 
-            {/* 2. 套餐选择 */}
             <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100">
               <h2 className="text-sm font-bold text-gray-500 mb-3 uppercase tracking-wider">{content.packages}</h2>
               <div className="space-y-3">
@@ -286,7 +272,6 @@ export default function MobileDetailingSaaS() {
               </div>
             </div>
 
-            {/* 3. 附加选项 */}
             <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100">
               <h2 className="text-sm font-bold text-gray-500 mb-3 uppercase tracking-wider">{content.addons}</h2>
               <div className="space-y-3">
@@ -309,7 +294,6 @@ export default function MobileDetailingSaaS() {
               </div>
             </div>
 
-            {/* 4. 联系信息 (已添加验证) */}
             <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 space-y-4">
               <h2 className="text-sm font-bold text-gray-500 uppercase tracking-wider">{content.contact}</h2>
               <input 
@@ -317,25 +301,27 @@ export default function MobileDetailingSaaS() {
                 placeholder={content.name}
                 className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:border-blue-500 transition-all"
                 value={details.name}
-                onChange={e => setDetails({...details, name: e.target.value})}
+                // 修复点：加上 (e: any)
+                onChange={(e: any) => setDetails({...details, name: e.target.value})}
               />
               <input 
                 type="tel" 
                 placeholder={content.phone}
                 className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:border-blue-500 transition-all"
                 value={details.phone}
-                onChange={e => setDetails({...details, phone: e.target.value})}
+                // 修复点：加上 (e: any)
+                onChange={(e: any) => setDetails({...details, phone: e.target.value})}
               />
               <textarea 
                 placeholder={content.notes}
                 rows={2}
                 className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:border-blue-500 transition-all"
                 value={details.notes}
-                onChange={e => setDetails({...details, notes: e.target.value})}
+                // 修复点：加上 (e: any)
+                onChange={(e: any) => setDetails({...details, notes: e.target.value})}
               />
             </div>
 
-            {/* 5. 支付按钮 (带 Loading) */}
             <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-4 safe-area-pb shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)]">
               <div className="max-w-md mx-auto flex items-center justify-between gap-4">
                 <div>
@@ -358,7 +344,6 @@ export default function MobileDetailingSaaS() {
           </div>
         )}
 
-        {/* ================= 登录界面 ================= */}
         {showLogin && (
           <div className="flex flex-col items-center justify-center min-h-[60vh] animate-in zoom-in duration-300">
             <div className="bg-white p-8 rounded-3xl shadow-xl w-full max-w-sm border border-gray-100">
@@ -373,12 +358,12 @@ export default function MobileDetailingSaaS() {
                 placeholder="PIN (8888)"
                 className="w-full text-center text-2xl tracking-widest p-4 bg-gray-50 rounded-xl border mb-4 focus:ring-2 focus:ring-blue-500 outline-none transition-all"
                 value={passwordInput}
-                onChange={e => setPasswordInput(e.target.value)}
+                // 修复点：加上 (e: any)
+                onChange={(e: any) => setPasswordInput(e.target.value)}
               />
               <div className="grid grid-cols-2 gap-3">
                 <button onClick={() => setShowLogin(false)} className="p-3 rounded-xl font-bold text-gray-500 bg-gray-100 hover:bg-gray-200 transition-colors">Cancel</button>
                 <button onClick={() => {
-                  // 注意：这是前端演示用的非安全验证。正式版需接后端 API。
                   if(passwordInput === '8888') { setViewMode('owner'); setShowLogin(false); setPasswordInput(''); } 
                   else alert('Demo PIN: 8888');
                 }} className="p-3 rounded-xl font-bold text-white bg-blue-600 hover:bg-blue-700 transition-colors">Login</button>
@@ -387,11 +372,9 @@ export default function MobileDetailingSaaS() {
           </div>
         )}
 
-        {/* ================= 老板后台 (CRM) ================= */}
         {viewMode === 'owner' && (
           <div className="space-y-6 animate-in slide-in-from-right duration-500">
             
-            {/* 1. 真实天气卡片 (Open-Meteo) */}
             <div className={`p-6 rounded-3xl text-white shadow-xl transition-colors ${weather.rainMode ? 'bg-red-500' : 'bg-blue-600'}`}>
               <div className="flex justify-between items-start mb-4">
                 <div>
@@ -413,7 +396,6 @@ export default function MobileDetailingSaaS() {
               </div>
             </div>
 
-            {/* 2. 标签管理 (优化后的代码) */}
             <div className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm">
               <h3 className="font-bold text-gray-800 mb-3 flex items-center gap-2">
                 <Tag className="w-4 h-4 text-blue-500" /> {content.tags}
@@ -447,7 +429,8 @@ export default function MobileDetailingSaaS() {
                     placeholder={content.addTag}
                     className="flex-1 p-2 bg-gray-50 rounded-lg text-sm outline-none border focus:border-blue-500 transition-colors"
                     value={newTagText}
-                    onChange={e => setNewTagText(e.target.value)}
+                    // 修复点：加上 (e: any)
+                    onChange={(e: any) => setNewTagText(e.target.value)}
                   />
                   <button 
                     onClick={handleAddTag}
@@ -459,7 +442,6 @@ export default function MobileDetailingSaaS() {
               </div>
             </div>
 
-            {/* 3. 任务列表 */}
             <div className="space-y-4">
               <h3 className="font-bold text-gray-800 px-1">{content.jobs}</h3>
               <div className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm group">
