@@ -572,7 +572,7 @@ export default function MobileDetailingCRM() {
     );
   };
 
-  // ==================== 渲染: 收入看板 ====================
+  // ==================== 渲染: 收入看板 (修复版) ====================
   const renderRevenue = () => {
     const chartData = revenueView === 'daily' ? revenueStats.daily : revenueView === 'weekly' ? revenueStats.weekly : revenueStats.monthly;
     return (
@@ -590,10 +590,24 @@ export default function MobileDetailingCRM() {
           </div>
         </div>
         <div className="flex gap-2 bg-gray-100 p-1 rounded-lg">{[{ key: 'daily', label: t.dailyRevenue }, { key: 'weekly', label: t.weeklyRevenue }, { key: 'monthly', label: t.monthlyRevenue }].map(({ key, label }) => <button key={key} onClick={() => setRevenueView(key as typeof revenueView)} className={`flex-1 py-2 px-3 rounded-md text-xs font-medium transition-colors ${revenueView === key ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>{label}</button>)}</div>
-        <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100"><div className="h-64"><ResponsiveContainer width="100%" height="100%"><BarChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}><CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" /><XAxis dataKey="label" tick={{ fontSize: 10, fill: '#9ca3af' }} axisLine={{ stroke: '#e5e7eb' }} /><YAxis tick={{ fontSize: 10, fill: '#9ca3af' }} axisLine={{ stroke: '#e5e7eb' }} tickFormatter={(value) => `$${value}`} /><Tooltip formatter={(value: number, name: string) => [`$${value.toFixed(2)}`, name === 'revenue' ? t.revenue : name === 'profit' ? t.profit : t.cost]} contentStyle={{ borderRadius: '8px', border: '1px solid #e5e7eb', fontSize: '12px' }} /><Bar dataKey="revenue" fill="#3b82f6" radius={[4, 4, 0, 0]} name={t.revenue} /><Bar dataKey="profit" fill="#10b981" radius={[4, 4, 0, 0]} name={t.profit} /></BarChart></ResponsiveContainer></div></div>
+        
+        {/* 修复了 Tooltip 类型报错 */}
+        <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100"><div className="h-64"><ResponsiveContainer width="100%" height="100%"><BarChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}><CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" /><XAxis dataKey="label" tick={{ fontSize: 10, fill: '#9ca3af' }} axisLine={{ stroke: '#e5e7eb' }} /><YAxis tick={{ fontSize: 10, fill: '#9ca3af' }} axisLine={{ stroke: '#e5e7eb' }} tickFormatter={(value) => `$${value}`} />
+        <Tooltip 
+          formatter={(value: any, name: any) => [`$${Number(value).toFixed(2)}`, name === 'revenue' ? t.revenue : name === 'profit' ? t.profit : t.cost]} 
+          contentStyle={{ borderRadius: '8px', border: '1px solid #e5e7eb', fontSize: '12px' }} 
+        />
+        <Bar dataKey="revenue" fill="#3b82f6" radius={[4, 4, 0, 0]} name={t.revenue} /><Bar dataKey="profit" fill="#10b981" radius={[4, 4, 0, 0]} name={t.profit} /></BarChart></ResponsiveContainer></div></div>
+        
+        {/* 修复了 PieChart Tooltip 类型报错 */}
         <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
           <h3 className="font-bold text-gray-800 mb-4 flex items-center gap-2"><PieChart className="w-4 h-4 text-purple-500" />{t.profit} & {t.cost}</h3>
-          <div className="h-48"><ResponsiveContainer width="100%" height="100%"><RechartsPie><Pie data={[{ name: t.profit, value: revenueStats.totalRevenue * 0.65, color: '#10b981' }, { name: t.cost, value: revenueStats.totalRevenue * 0.35, color: '#f59e0b' }]} cx="50%" cy="50%" innerRadius={50} outerRadius={70} paddingAngle={5} dataKey="value"><Cell fill="#10b981" /><Cell fill="#f59e0b" /></Pie><Tooltip formatter={(value: number) => [`$${value.toFixed(0)}`, '']} contentStyle={{ borderRadius: '8px', border: '1px solid #e5e7eb', fontSize: '12px' }} /><Legend verticalAlign="bottom" height={36} formatter={(value) => <span className="text-xs text-gray-600">{value}</span>} /></RechartsPie></ResponsiveContainer></div>
+          <div className="h-48"><ResponsiveContainer width="100%" height="100%"><RechartsPie><Pie data={[{ name: t.profit, value: revenueStats.totalRevenue * 0.65, color: '#10b981' }, { name: t.cost, value: revenueStats.totalRevenue * 0.35, color: '#f59e0b' }]} cx="50%" cy="50%" innerRadius={50} outerRadius={70} paddingAngle={5} dataKey="value"><Cell fill="#10b981" /><Cell fill="#f59e0b" /></Pie>
+          <Tooltip 
+            formatter={(value: any) => [`$${Number(value).toFixed(0)}`, '']} 
+            contentStyle={{ borderRadius: '8px', border: '1px solid #e5e7eb', fontSize: '12px' }} 
+          />
+          <Legend verticalAlign="bottom" height={36} formatter={(value) => <span className="text-xs text-gray-600">{value}</span>} /></RechartsPie></ResponsiveContainer></div>
           <div className="grid grid-cols-3 gap-2 mt-4">
             <div className="text-center p-2 bg-gray-50 rounded-lg"><div className="text-xs text-gray-500">{t.totalRevenue}</div><div className="font-bold text-gray-900">${revenueStats.totalRevenue}</div></div>
             <div className="text-center p-2 bg-green-50 rounded-lg"><div className="text-xs text-green-600">{t.profit}</div><div className="font-bold text-green-700">${Math.round(revenueStats.totalRevenue * 0.65)}</div></div>
